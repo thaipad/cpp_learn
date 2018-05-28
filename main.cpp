@@ -3,23 +3,20 @@
 #include <fstream>
 #include <iostream>
 
+struct arg1 {
+	pthread_mutex_t mtx;
+	pthread_cond_t cnd;
+};	
+
+
 void *start_pth1(void *val) {
-	pthread_mutex_lock((pthread_mutex_t *) val);
+	
+	pthread_cond_wait(&(((arg1 *) val)->cnd), &(((arg1 *) val)->mtx));
 	return 0;
 }
 
 void *start_pth2(void *val) {
-	pthread_spin_lock((pthread_spinlock_t *) val);
-	return 0;
-}
-
-void *start_pth3(void *val) {
-	pthread_rwlock_rdlock((pthread_rwlock_t *) val);
-	return 0;
-}
-
-void *start_pth4(void *val) {
-	pthread_rwlock_wrlock((pthread_rwlock_t *) val);
+	pthread_barrier_wait((pthread_barrier_t *) val);
 	return 0;
 }
 
@@ -29,30 +26,22 @@ int main(int argc, char **argv) {
 	// mutex
 	pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
 	pthread_mutex_init(&mtx, NULL);
-	pthread_mutex_lock(&mtx);
-	// spin lock
-	pthread_spinlock_t spn = (pthread_spinlock_t) 0;
-	pthread_spin_init(&spn, 0);
-	pthread_spin_lock(&spn);
-	// RW-lock
-	pthread_rwlock_t rl = PTHREAD_RWLOCK_INITIALIZER;
-	pthread_rwlock_t wl = PTHREAD_RWLOCK_INITIALIZER;
- 	pthread_rwlock_init(&rl, NULL);
-	pthread_rwlock_init(&wl, NULL);
-	pthread_rwlock_rdlock(&rl);
-	pthread_rwlock_wrlock(&wl);
+//	pthread_mutex_lock(&mtx);
+	// conditional var
+	pthread_cond_t cnd = PTHREAD_COND_INITIALIZER;
+	pthread_cond_init(&cnd, NULL);
+	// barrier
+	pthread_barrier_t brr;
+	pthread_barrier_init(&brr, NULL, 1);
 
-
-
-
+	arg1 a1;
+	a1.mtx = mtx;
+	a1.cnd = cnd;
+	
 	pthread_t pth1;
 	pthread_t pth2;
-	pthread_t pth3;
-	pthread_t pth4;
-	pthread_create(&pth1, NULL, start_pth1, &mtx);
-//	pthread_create(&pth2, NULL, start_pth2, &spn);
-	pthread_create(&pth3, NULL, start_pth3, &rl);
-	pthread_create(&pth4, NULL, start_pth4, &wl);
+	pthread_create(&pth1, NULL, start_pth1, &a1);
+	pthread_create(&pth2, NULL, start_pth2, &brr);
 
 	pause();
 	return 0;
